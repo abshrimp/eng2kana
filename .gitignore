@@ -1,0 +1,17 @@
+node_modules/
+.wrangler/
+.dev.vars*
+.env*
+secrets.json
+secrets.production.json
+*google-tts*.json
+*service-account*.json
+*.sqlite*
+# 認証情報・ローカルデータ
+credentials*.json
+secrets.*.json
+*.pem
+*.key
+.DS_Store
+coverage/
+secrets.production.json

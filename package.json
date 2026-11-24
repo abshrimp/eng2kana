@@ -1,0 +1,9 @@
+{
+  "name": "eng2kana",
+  "version": "3.0.0",
+  "private": true,
+  "type": "module",
+  "engines": {"node": ">=22.13.0"},
+  "scripts": {"dev":"wrangler dev", "deploy":"wrangler deploy", "db:local":"wrangler d1 migrations apply DB --local", "db:remote":"wrangler d1 migrations apply DB --remote", "test":"node --test test/*.test.mjs"},
+  "devDependencies": {"wrangler":"^4.0.0"}
+}

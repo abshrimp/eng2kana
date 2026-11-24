@@ -1,0 +1,37 @@
+name = "eng2kana"
+main = "src/worker.mjs"
+compatibility_date = "2026-11-24"
+compatibility_flags = ["nodejs_compat"]
+workers_dev = true
+
+# Workerの自動ログ収集を無効にし、アクセス情報の保存を抑える。
+[observability]
+enabled = false
+
+# 15分ごとに期限切れのレート制限記録を削除する（UTC）。
+[triggers]
+crons = ["*/15 * * * *"]
+
+[assets]
+directory = "./public"
+binding = "ASSETS"
+run_worker_first = ["/api/*"]
+
+[vars]
+GOOGLE_CLOUD_PROJECT = "eng2kana"
+GOOGLE_TTS_VOICE = "en-US-Chirp3-HD-Aoede"
+TTS_IP_REQUESTS_PER_MINUTE = "5"
+TTS_IP_BYTES_PER_MINUTE = "10000"
+TTS_MAX_CHARS_PER_REQUEST = "1000"
+TTS_MONTHLY_CHAR_LIMIT = "950000"
+TTS_EXTERNAL_MONTHLY_CHARS = "0"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "eng2kana-usage"
+database_id = "d9820609-c222-4ced-8c88-8e50692aff48"
+migrations_dir = "migrations"
+
+[[routes]]
+pattern = "eng2kana.ebii.net"
+custom_domain = true

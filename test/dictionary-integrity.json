@@ -1,0 +1,15 @@
+{
+  "pronunciation": "pronunciation.e11438277adc5297.json",
+  "pos": "pos.19e7db7781dd0f7b.json",
+  "counts": {
+    "pronunciation": 124101,
+    "variants": 133071,
+    "pos": 65297,
+    "onsets": 107
+  },
+  "sha256": {
+    "dictionary": "e9e713b544e2d6ec61e453265e314b428e7c99e35d7092fcf825e3b1ab62154a",
+    "posdata": "664055ddad6920ca00a05b5fb19e423d6ecda9d86d21f164f0c40ab4bb3fbe72",
+    "onsets": "947a7ed46c727c7037a8bc12acdd452e12dabf5c1ad078a8aa1f3f52a17e7cb3"
+  }
+}
