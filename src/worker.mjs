@@ -19,6 +19,7 @@ export function createWorker({authorize=googleAccessToken,synthesize=googleSynth
     async fetch(req,env){
     const url=new URL(req.url),path=url.pathname;
     if(!path.startsWith('/api/'))return env.ASSETS.fetch(req);
+    let stage='CONFIG';
     try{
       const c=configFromEnv(env);
       if(path==='/api/tts/usage'){
@@ -34,18 +35,22 @@ export function createWorker({authorize=googleAccessToken,synthesize=googleSynth
       if(!text)throw httpError(400,'英文を入力してください。');
       if([...text].length>c.maxRequestChars)throw httpError(413,`音声生成は1回につき${c.maxRequestChars.toLocaleString('ja-JP')}文字以内にしてください。英文の解析は引き続き利用できます。`,'REQUEST_CHAR_LIMIT');
       const admin=await checkAdmin(req,c),chunks=splitText(text);
+      stage='D1_RESERVE';
       const reservation=await reserve(req,env,c,chunks,admin,now());
       // タイムアウト・応答消失・部分合成でも課金の可能性があるため、予約量は戻さない。
+      stage='GOOGLE_AUTH';
       const auth=await authorize(env);
+      stage='GOOGLE_SYNTHESIZE';
       const type=chunks.length===1?'MP3':'LINEAR16',results=[];
       for(const chunk of chunks){beforeDispatch(reservation,now());results.push(await synthesize(chunk,type,c.voice,auth));}
+      stage='AUDIO_RESPONSE';
       const audio=type==='MP3'?results[0]:joinWav(results);
       return new Response(audio,{headers:{...headers,'Content-Type':type==='MP3'?'audio/mpeg':'audio/wav'}});
     }catch(e){
       if(e.status)return error(e.status,e.message,e.code,e.retryAfter);
       // 入力英文・完全なURL・ヘッダー・OAuthエラーの詳細・認証情報はログに出力しない。
       if(e.googleStatus)return error(502,e.googleStatus===401||e.googleStatus===403?'Google Cloud の認証・API設定・請求先を確認してください。':e.googleStatus===429?'Google Cloud の利用上限に達しました。':'音声を生成できませんでした。','GOOGLE_TTS_ERROR');
-      return error(503,'音声生成を利用できません。サーバー設定をご確認ください。','SERVER_UNAVAILABLE');
+      return error(503,'音声生成を利用できません。サーバー設定をご確認ください。','SERVER_UNAVAILABLE_'+stage);
     }
   }};
 }

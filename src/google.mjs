@@ -21,7 +21,7 @@ export async function googleAccessToken(env,{fetcher=fetch,now=Date.now}={}){
   const jwt=`${encode({alg:'RS256',typ:'JWT',...(key.private_key_id?{kid:key.private_key_id}:{})})}.${encode({iss:key.client_email,scope:'https://www.googleapis.com/auth/cloud-platform',aud:TOKEN_URL,iat:current,exp:current+3600})}`;
   const signature=await crypto.subtle.sign('RSASSA-PKCS1-v1_5',privateKey,new TextEncoder().encode(jwt));
   const assertion=`${jwt}.${Buffer.from(signature).toString('base64url')}`;
-  const res=await fetcher(TOKEN_URL,{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:new URLSearchParams({grant_type:'urn:ietf:params:oauth:grant-type:jwt-bearer',assertion}),signal:AbortSignal.timeout(20000),redirect:'error'});
+  const res=await fetcher(TOKEN_URL,{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:new URLSearchParams({grant_type:'urn:ietf:params:oauth:grant-type:jwt-bearer',assertion}),signal:AbortSignal.timeout(20000),redirect:'manual'});
   if(!res.ok)throw googleError(res.status);
   const data=await res.json();
   if(typeof data.access_token!=='string'||!data.access_token||!Number.isFinite(Number(data.expires_in))||Number(data.expires_in)<=0)throw googleError(502);
@@ -29,7 +29,7 @@ export async function googleAccessToken(env,{fetcher=fetch,now=Date.now}={}){
   return {token:data.access_token,project};
 }
 export async function googleSynthesize(text,audioEncoding,voice,auth,{fetcher=fetch}={}){
-  const res=await fetcher(SYNTH_URL,{method:'POST',headers:{Authorization:`Bearer ${auth.token}`,'x-goog-user-project':auth.project,'Content-Type':'application/json'},body:JSON.stringify({input:{text},voice:{languageCode:'en-US',name:voice},audioConfig:{audioEncoding}}),signal:AbortSignal.timeout(90000),redirect:'error'});
+  const res=await fetcher(SYNTH_URL,{method:'POST',headers:{Authorization:`Bearer ${auth.token}`,'x-goog-user-project':auth.project,'Content-Type':'application/json'},body:JSON.stringify({input:{text},voice:{languageCode:'en-US',name:voice},audioConfig:{audioEncoding}}),signal:AbortSignal.timeout(90000),redirect:'manual'});
   if(!res.ok)throw googleError(res.status);
   const data=await res.json();
   if(typeof data.audioContent!=='string'||!data.audioContent)throw googleError(502);
