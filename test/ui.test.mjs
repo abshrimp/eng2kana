@@ -66,6 +66,8 @@ test('OGP・Twitterカード・アイコンの設定と実画像の整合性',()
  assert.match(html,/name="twitter:image" content="https:\/\/eng2kana\.ebii\.net\/og\.png"/);
  assert.match(html,/property="og:image:width" content="1200"/);
  assert.match(html,/property="og:image:height" content="630"/);
+ assert.match(html,/property="og:image:alt" content="英語 to カタカナ 変換器/);
+ assert.match(html,/name="twitter:image:alt" content="英語 to カタカナ 変換器/);
  verifyPng(asset('og.png'),1200,630);
  verifyPng(asset('apple-touch-icon.png'),180,180);
  const ico=asset('favicon.ico');
