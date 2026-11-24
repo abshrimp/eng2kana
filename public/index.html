@@ -8,13 +8,56 @@ const ttsBypassKey=(()=>{const url=new URL(location.href),fragment=new URLSearch
 </script>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="light dark"><title>英語 to カタカナ 変換器</title>
 <meta name="description" content="英文を自然なリズムのカタカナ発音に変換し、強拍・弱拍や動詞を確認できるツールです。">
+<link rel="canonical" href="https://eng2kana.ebii.net/">
+<meta property="og:type" content="website">
+<meta property="og:locale" content="ja_JP">
+<meta property="og:site_name" content="英語 to カタカナ 変換器">
+<meta property="og:title" content="英語 to カタカナ 変換器">
+<meta property="og:description" content="英文を自然なリズムのカタカナ発音に変換。強拍・弱拍や動詞を確認し、英語の音声も聞けます。">
+<meta property="og:url" content="https://eng2kana.ebii.net/">
+<meta property="og:image" content="https://eng2kana.ebii.net/og.png">
+<meta property="og:image:type" content="image/png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="ENG2KANA — ENGLISH TO KATAKANA">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="英語 to カタカナ 変換器">
+<meta name="twitter:description" content="英文のリズムと発音をカタカナで確認し、音声で練習できるツール。">
+<meta name="twitter:image" content="https://eng2kana.ebii.net/og.png">
+<meta name="twitter:image:alt" content="ENG2KANA — ENGLISH TO KATAKANA">
+<meta name="twitter:creator" content="@s__hrimp">
+<meta name="theme-color" content="#f6f7f8" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#171b20" media="(prefers-color-scheme: dark)">
+<link rel="icon" href="/favicon.ico" sizes="48x48">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png" sizes="180x180">
 <link rel="stylesheet" href="/style.css">
 </head>
 <body>
-<main><header><h1>英語 to カタカナ 変換器</h1></header>
+<main><header class="site-header"><div class="brand"><img src="/favicon.svg" width="30" height="30" alt=""><h1>英語 to カタカナ 変換器</h1></div><button class="icon-button" id="open-settings" type="button" aria-label="設定" title="設定" aria-haspopup="dialog"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M4 17h16"/><circle cx="9" cy="7" r="2.4" fill="var(--paper)"/><circle cx="15" cy="17" r="2.4" fill="var(--paper)"/></svg></button></header>
 <section class="input-section" aria-label="英文入力"><div class="input-heading"><label for="input" class="input-label">英文</label><button class="icon-button" id="clear" type="button" aria-label="入力をクリア" title="入力をクリア"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m7 7 10 10M17 7 7 17"/></svg></button></div><textarea id="input" maxlength="6000" spellcheck="false" autocapitalize="off" autocorrect="off" lang="en" placeholder="英文を入力">I think we should take a break and get something to eat.</textarea><div class="input-actions"><button class="retry-button" id="analyze" type="button" hidden disabled>辞書を再読み込み</button></div></section>
-<section class="panel" id="results" aria-label="発音の解析結果"><div class="topline"><div class="result-heading"><h2>発音</h2><span class="count" id="beats-count"></span></div><div class="right-actions"><button class="speech-button" id="speak" type="button" aria-pressed="false" disabled><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path id="speak-icon" d="M8 5v14l11-7z"/></svg><span id="speak-label">全文を再生</span></button><button class="icon-button" id="copy" type="button" aria-label="発音をコピー" title="発音をコピー" disabled><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/></svg></button></div></div><div id="output" aria-live="polite" aria-busy="true"><p class="dictionary-status">辞書を読み込んでいます…</p></div><div class="toast" id="toast" role="status"></div></section>
-<details class="advanced" id="advanced"><summary><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M4 17h16"/><circle cx="9" cy="7" r="2" fill="var(--paper)"/><circle cx="15" cy="17" r="2" fill="var(--paper)"/></svg><span>詳細設定・拍の調整</span></summary><div class="options"><label for="density">拍の密度 <select id="density"><option value="sparse">少なめ</option><option value="normal" selected>標準</option><option value="dense">多め</option></select></label><label><input type="checkbox" id="connected" checked>自然な発音表記</label><label><input type="checkbox" id="showipa">IPAを表示</label><button class="ghost" id="reset" type="button" disabled>自動判定に戻す</button></div><div id="edit" class="edit-panel"></div><details class="reference"><summary>表記について</summary><p>大きい文字は強拍、小さい文字は弱い語句です。米国英語の発音辞書を基にした近似表記であり、話し方によって変化します。弱い語句は短く表し、f・v・th・dh は英字で残します。元の語句は維持します。子音とYの融合（例：did you）、母音間のT・Dの弾き音、語境界の連結を考慮します。発音の変化は話者や強調の仕方によって異なります。</p><p>音声再生時のみ、入力された英文をサーバー経由で Google Cloud Text-to-Speech に送信します。発音・拍の解析はブラウザ内で行います。</p><p>参考：講談社ブルーバックス <a href="https://bluebacks.kodansha.co.jp/books/9784062579872/appendix/theory/" target="_blank" rel="noopener noreferrer">『怖いくらい通じるカタカナ英語の法則』法則編</a>。公開されている法則の一部を発音辞書の音素と音の位置に応じて独自に適用しています。</p><details><summary>辞書とライセンス</summary><p>発音辞書：CMU Pronouncing Dictionary<br>品詞辞書：TextBlob / Pattern</p><p><a href="/dictionary-notices.txt" target="_blank" rel="noopener noreferrer">著作権表示・ライセンス</a></p></details></details></details>
-<footer class="site-footer"><div class="footer-row"><span class="creator">制作者：エイビー <a href="https://twitter.com/s__hrimp" target="_blank" rel="noopener noreferrer">@s__hrimp</a></span><a href="/privacy.html">プライバシーポリシー</a></div></footer>
+<section class="panel" id="results" aria-label="発音の解析結果"><div class="topline"><div class="result-heading"><h2>発音</h2><span class="count" id="beats-count"></span></div><div class="right-actions"><button class="speech-button" id="speak" type="button" title="全文を再生" aria-label="全文を再生" aria-pressed="false" disabled><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path id="speak-icon" d="M8 5v14l11-7z"/></svg><span id="speak-label">全文を再生</span></button><div class="rate-control"><select id="playback-rate" aria-label="再生速度" title="再生速度"><option value="0.5">0.5×</option><option value="0.65">0.65×</option><option value="0.75">0.75×</option><option value="0.85">0.85×</option><option value="1" selected>1×</option><option value="1.15">1.15×</option><option value="1.25">1.25×</option><option value="1.5">1.5×</option><option value="1.75">1.75×</option><option value="2">2×</option></select><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m7 10 5 5 5-5"/></svg></div><button class="icon-button" id="copy" type="button" aria-label="発音をコピー" title="発音をコピー" disabled><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/></svg></button></div></div><div id="output" aria-live="polite" aria-busy="true"><p class="dictionary-status">辞書を読み込んでいます…</p></div><div class="toast" id="toast" role="status"></div></section>
+<div class="result-tools"><button class="quiet-button" id="open-beats" type="button" aria-haspopup="dialog" disabled><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 16v-5M9 19V5M14 15v-4M19 19V7"/></svg><span>拍の調整</span></button></div>
+<dialog id="settings-dialog" class="settings-dialog" aria-labelledby="dialog-title">
+ <div class="modal-shell">
+  <div class="modal-head"><h2 id="dialog-title">設定</h2><form method="dialog"><button class="icon-button" type="submit" aria-label="閉じる" title="閉じる"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg></button></form></div>
+  <div class="modal-tabs" role="tablist" aria-label="設定の種類">
+   <button id="tab-settings" type="button" role="tab" aria-selected="true" aria-controls="panel-settings">表示設定</button>
+   <button id="tab-beats" type="button" role="tab" aria-selected="false" aria-controls="panel-beats" tabindex="-1">拍の調整</button>
+  </div>
+  <div class="modal-body">
+   <section id="panel-settings" role="tabpanel" aria-labelledby="tab-settings">
+    <div class="setting-row"><label for="density">拍の密度</label><select id="density"><option value="sparse">少なめ</option><option value="normal" selected>標準</option><option value="dense">多め</option></select></div>
+    <label class="setting-row" for="connected"><span>自然な発音表記</span><input type="checkbox" id="connected" checked></label>
+   </section>
+   <section id="panel-beats" role="tabpanel" aria-labelledby="tab-beats" hidden>
+    <div class="edit-toolbar"><div class="view-switch" role="group" aria-label="調整の単位"><button id="view-words" type="button" aria-pressed="true">単語</button><button id="view-syllables" type="button" aria-pressed="false">音節</button></div><button class="quiet-button" id="reset" type="button" disabled>自動判定に戻す</button></div>
+    <label class="ipa-toggle" id="ipa-control" for="showipa" hidden><input type="checkbox" id="showipa">IPAを表示</label>
+    <div id="edit" class="edit-panel"></div>
+   </section>
+  </div>
+ </div>
+</dialog>
+<footer class="site-footer"><div class="footer-row"><span class="creator">制作者：エイビー <a href="https://twitter.com/s__hrimp" target="_blank" rel="noopener noreferrer">@s__hrimp</a></span><div class="footer-links"><a href="/dictionary-notices.txt">ライセンス</a><a href="/privacy.html">プライバシーポリシー</a></div></div></footer>
 </main>
 <script type="module" src="/app.mjs"></script></body></html>
