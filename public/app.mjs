@@ -76,6 +76,8 @@ function selectEditView(view){
  if(settingsDialog.open&&activeTab==='beats')renderBeatEditor();
 }
 function selectDialogTab(tab,focus=false){
+ // 単一の入口から拍の調整に切り替えた場合も、現在の英文を反映する。
+ if(tab==='beats'&&dictionaries&&model?.text!==$('#input').value.trim()){clearTimeout(inputTimer);analyze();}
  activeTab=tab;
  for(const name of ['settings','beats']){
   const selected=name===tab,button=$('#tab-'+name);
@@ -86,14 +88,12 @@ function selectDialogTab(tab,focus=false){
  if(tab==='beats')renderBeatEditor();
  if(focus)$('#tab-'+tab).focus();
 }
-function openSettings(tab,opener){
+function openSettings(opener){
  if(settingsDialog.open)return;
- // 自動解析の待ち時間中でも、モーダルでは現在の入力に対応する拍を表示する。
- if(tab==='beats'&&model?.text!==$('#input').value.trim()){clearTimeout(inputTimer);analyze();}
- dialogOpener=opener;selectDialogTab(tab);settingsDialog.showModal();$('#tab-'+tab).focus();
+ // 再度開くときは最後に選択したタブを維持する。
+ dialogOpener=opener;selectDialogTab(activeTab);settingsDialog.showModal();$('#tab-'+activeTab).focus();
 }
-$('#open-settings').addEventListener('click',e=>openSettings('settings',e.currentTarget));
-$('#open-beats').addEventListener('click',e=>openSettings('beats',e.currentTarget));
+$('#open-settings').addEventListener('click',e=>openSettings(e.currentTarget));
 for(const name of ['settings','beats']){
  const tab=$('#tab-'+name);
  tab.addEventListener('click',()=>selectDialogTab(name,true));
@@ -113,7 +113,7 @@ settingsDialog.addEventListener('click',e=>{
 function render(focus){
  const out=$('#output');out.replaceChildren();
  const available=!!model?.words.length;
- for(const id of ['copy','reset','open-beats'])$('#'+id).disabled=!available;
+ for(const id of ['copy','reset'])$('#'+id).disabled=!available;
  if(!available){out.append(el('p','empty','英文を入力してください。'));$('#beats-count').textContent='';}
  else{
   model.phrases.forEach(p=>readings(p,$('#connected').checked));
