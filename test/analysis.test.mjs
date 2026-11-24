@@ -67,6 +67,8 @@ test('既存の弱形・動詞着色と元の語順を維持する',()=>{
  assert.deepEqual(m.words.filter(w=>w.predicateRole).map(w=>w.w),['serious','leave']);
  assert.equal(pair("if you're","if","you're").reading,'イfュア');
  assert.equal(m.words.find(w=>w.w==='about').syls.map(s=>s.reading).join(''),'バゥ');
+ assert.equal(m.words.find(w=>w.w==='serious').syls.map(s=>s.reading).join(''),'シリアス');
+ assert.equal(m.words.find(w=>w.w==='spain').syls.map(s=>s.reading).join(''),'スパイン');
  assert.equal(m.words.find(w=>w.w==='could').syls.map(s=>s.reading).join(''),'ク');
  assert.equal(analyze('bread and butter').words.find(w=>w.w==='and').syls.map(s=>s.reading).join(''),'ン');
 });

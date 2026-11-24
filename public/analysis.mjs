@@ -106,7 +106,7 @@ const weakSyllable=s=>!s.beat&&(s.stress===0||unstressed(s.word));
 export function readings(p,natural=true){
  rhythmStyle=natural;
  for(const s of p.syls){
-  s.readPhones=s.phones?.slice()||null;s.note='';s.connectedChanged=false;
+  s.readPhones=s.phones?.slice()||null;s.note='';s.connectedChanged=false;s.omitWeakVowel=false;
   setReading(s,s.phones?kanaPhones(s.phones,false):approxKana(s.ipa));
  }
  if(!natural)return;
@@ -123,6 +123,11 @@ export function readings(p,natural=true){
   if(t.w==='the')ph=VSTART(next)?'DH IY0':'DH AH0';
   if(t.w==='to')ph=VSTART(next)?'T UW0':'T AH0';
   if(ph!==undefined){s.readPhones=ph.split(' ');s.note='弱形';}
+ }
+ // 読みやすさのため弱い母音を表示しない音節には、前の語の子音を移さない。
+ for(const t of p.words){
+  const hint=unstressed(t)&&SHORT_WEAK[t.w];
+  if(hint&&hint.length===t.syls.length)t.syls.forEach((s,i)=>{s.omitWeakVowel=hint[i]==='';});
  }
  applyConnectedSpeech(p);
  for(const t of p.words){

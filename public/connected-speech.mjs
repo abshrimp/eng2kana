@@ -49,7 +49,7 @@ export function applyConnectedSpeech(phrase){
   }
   // 母音間のT・Dは、後続が弱い場合には弾き音になり得る。
   // 後続音節へ移動する前に判定することで、get it等にも語内と同じ規則を適用する。
-  if(vowel(begin)&&linkOnsets.has(end)&&hasVowel(left)){
+  if(vowel(begin)&&!b.omitWeakVowel&&linkOnsets.has(end)&&hasVowel(left)){
    const prev=left.at(-2);
    const flap=(end==='T'||end==='D')&&weak(b)&&stressed(prev);
    left.pop();right.unshift(flap?'FL':end);
@@ -81,7 +81,9 @@ export function applyConnectedSpeech(phrase){
   if(!valid(s)||s.readPhones.at(-1)!=='T')continue;
   const next=pairs.get(s);
   if(!next||!vowel(next.readPhones[0])){
-   s.readPhones[s.readPhones.length-1]='STOP';mark(s,'語末Tの弱化');
+   s.readPhones[s.readPhones.length-1]='STOP';
+   // 語末閉鎖の弱化は短い学習用表記と両立する。融合や移動と区別する。
+   s.note=[s.note,'語末Tの弱化'].filter(Boolean).join('・');
   }
  }
 }
