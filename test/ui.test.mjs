@@ -30,7 +30,10 @@ test('主画面とモーダルのアクセシブルな構造・不要な折り�
  assert.doesNotMatch(html,/<details\b|表記について/);
  assert.match(html,/<dialog id="settings-dialog"[^>]*aria-labelledby="dialog-title"/);
  assert.match(html,/id="open-settings"[^>]*aria-haspopup="dialog"/);
- assert.match(html,/id="open-beats"[^>]*aria-haspopup="dialog"/);
+ assert.equal([...html.matchAll(/aria-haspopup="dialog"/g)].length,1);
+ assert.match(html,/id="open-settings"[^>]*aria-controls="settings-dialog"/);
+ assert.doesNotMatch(html,/id="open-beats"|class="result-tools"/);
+ assert.doesNotMatch(asset('app.mjs').toString(),/open-beats/);
  for(const name of ['settings','beats']){
   assert.match(html,new RegExp('id="tab-'+name+'"[^>]*aria-controls="panel-'+name+'"'));
   assert.match(html,new RegExp('id="panel-'+name+'"[^>]*aria-labelledby="tab-'+name+'"'));
@@ -75,4 +78,22 @@ test('OGP・Twitterカード・アイコンの設定と実画像の整合性',()
  assert.equal(ico[6],48);assert.equal(ico[7],48);
  verifyPng(ico.subarray(ico.readUInt32LE(18)),48,48);
  assert.match(asset('favicon.svg').toString(),/<svg[^>]*viewBox="0 0 64 64"/);
+});
+
+test('動きは短い操作応答に限定し、動きを減らす端末設定を尊重する',()=>{
+ const css=asset('style.css').toString(),app=asset('app.mjs').toString();
+ const start=css.indexOf('@media (prefers-reduced-motion: no-preference)');
+ assert.ok(start>=0);
+ const motion=css.slice(start);
+ assert.match(motion,/--motion-quick:\s*120ms/);
+ assert.match(motion,/--motion-panel:\s*180ms/);
+ assert.match(motion,/\.settings-dialog\[open\]\s*\{\s*animation:/);
+ assert.match(motion,/\.modal-body > \[role="tabpanel"\]:not\(\[hidden\]\)/);
+ assert.match(motion,/@starting-style/);
+ assert.match(motion,/overlay var\(--motion-panel\) allow-discrete/);
+ assert.match(motion,/--dialog-offset:\s*translateY\(24px\)/);
+ assert.doesNotMatch(css.slice(0,start),/\banimation\s*:/);
+ assert.doesNotMatch(motion,/\.(?:reading-summary|reading-line|rhythm-unit)\s*[^{}]*\{[^}]*animation:/);
+ assert.match(app,/selectDialogTab\(activeTab\);settingsDialog\.showModal\(\)/);
+ assert.match(app,/tab==='beats'&&dictionaries&&model\?\.text!==/);
 });

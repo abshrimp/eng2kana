@@ -133,12 +133,11 @@ textarea::placeholder { color: var(--muted); }
 }
 .rate-control select:hover { background: var(--soft); color: var(--ink); }
 .rate-control svg { position: absolute; width: 15px; height: 15px; right: 3px; color: var(--muted); pointer-events: none; }
-.result-tools { display: flex; justify-content: flex-end; margin-top: 3px; }
 .quiet-button { display: inline-flex; align-items: center; gap: 6px; border: 0; border-radius: 8px; background: transparent; color: var(--muted); font-size: 13px; padding: 7px 9px; }
 .quiet-button svg { width: 17px; height: 17px; }
 .quiet-button:not(:disabled):hover { color: var(--ink); background: var(--soft); }
 .footer-links { display: flex; gap: 0 14px; flex-wrap: wrap; }
-.site-footer { margin-top: 8px; }
+.site-footer { margin-top: 18px; }
 .speech-button { flex: none; }
 body:has(dialog[open]) { overflow: hidden; }
 
@@ -192,4 +191,69 @@ body:has(dialog[open]) { overflow: hidden; }
 @media (max-width: 340px) {
  .brand h1 { font-size: 17px; }
  .edit-toolbar .quiet-button { font-size: 12px; }
+}
+
+
+/* 操作への応答だけを短く動かし、入力中の発音表示は点滅させない。 */
+@media (prefers-reduced-motion: no-preference) {
+  :root { --motion-quick: 120ms; --motion-panel: 180ms; --motion-ease: cubic-bezier(.2,.75,.3,1); }
+  .icon-button, .speech-button, .quiet-button, .word, .syllable, .view-switch button, .retry-button {
+    transition: background-color var(--motion-quick) ease, color var(--motion-quick) ease,
+      border-color var(--motion-quick) ease, box-shadow var(--motion-quick) ease,
+      opacity var(--motion-quick) ease, transform var(--motion-quick) var(--motion-ease),
+      filter var(--motion-quick) ease;
+  }
+  .icon-button:not(:disabled):active, .speech-button:not(:disabled):active,
+  .quiet-button:not(:disabled):active, .word:not(:disabled):active,
+  .syllable:not(:disabled):active, .view-switch button:not(:disabled):active {
+    transform: scale(.96);
+  }
+  textarea, .rate-control select, .setting-row select {
+    transition: background-color var(--motion-quick) ease, border-color var(--motion-quick) ease,
+      color var(--motion-quick) ease;
+  }
+  .modal-tabs button {
+    transition: color var(--motion-quick) ease, border-color var(--motion-quick) ease;
+  }
+  .modal-body > [role="tabpanel"]:not([hidden]) {
+    animation: settings-tab-enter 140ms var(--motion-ease) both;
+  }
+  .settings-dialog { --dialog-offset: translateY(9px) scale(.99); }
+  /* 離散トランジションに未対応のブラウザでも、開く動作は自然に表示する。 */
+  .settings-dialog[open] { animation: settings-enter var(--motion-panel) var(--motion-ease) both; }
+  .settings-dialog[open]::backdrop { animation: backdrop-enter var(--motion-panel) ease both; }
+  @keyframes settings-tab-enter {
+    from { opacity: .65; transform: translateY(3px); }
+    to { opacity: 1; transform: none; }
+  }
+  @keyframes settings-enter {
+    from { opacity: 0; transform: var(--dialog-offset); }
+    to { opacity: 1; transform: none; }
+  }
+  @keyframes backdrop-enter {
+    from { background-color: #111b2000; }
+    to { background-color: #111b2070; }
+  }
+  /* 対応ブラウザでは閉じる際もトップレイヤーを維持してから非表示にする。 */
+  @supports (transition-behavior: allow-discrete) and (overlay: auto) {
+    .settings-dialog {
+      opacity: 0; transform: var(--dialog-offset);
+      transition: opacity var(--motion-panel) ease, transform var(--motion-panel) var(--motion-ease),
+        display var(--motion-panel) allow-discrete, overlay var(--motion-panel) allow-discrete;
+    }
+    .settings-dialog[open] { animation: none; opacity: 1; transform: none; }
+    .settings-dialog::backdrop {
+      background-color: #111b2000;
+      transition: background-color var(--motion-panel) ease,
+        display var(--motion-panel) allow-discrete, overlay var(--motion-panel) allow-discrete;
+    }
+    .settings-dialog[open]::backdrop { animation: none; background-color: #111b2070; }
+    @starting-style {
+      .settings-dialog[open] { opacity: 0; transform: var(--dialog-offset); }
+      .settings-dialog[open]::backdrop { background-color: #111b2000; }
+    }
+  }
+  @media (max-width: 480px) {
+    .settings-dialog { --dialog-offset: translateY(24px); }
+  }
 }
