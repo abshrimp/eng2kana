@@ -3,17 +3,16 @@
 <head>
 <meta name="referrer" content="no-referrer">
 <script>
-// 管理者キーはメモリ内だけに保持し、アドレスバーから取り除く。
 const ttsBypassKey=(()=>{const url=new URL(location.href),fragment=new URLSearchParams(url.hash.slice(1));const key=url.searchParams.get("bypass")??fragment.get("bypass");if(key!==null){url.searchParams.delete("bypass");if(fragment.has("bypass")){fragment.delete("bypass");url.hash=fragment.toString();}try{history.replaceState(history.state,"",url);}catch{}}return key;})();
 </script>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="light dark"><title>英語 to カタカナ 変換器</title>
-<meta name="description" content="英文を自然なリズムのカタカナ発音に変換し、強拍・弱拍や動詞を確認できるツールです。">
+<meta name="description" content="英文を自然なカタカナ発音に変換し、音声も確認できるツールです">
 <link rel="canonical" href="https://eng2kana.ebii.net/">
 <meta property="og:type" content="website">
 <meta property="og:locale" content="ja_JP">
 <meta property="og:site_name" content="英語 to カタカナ 変換器">
 <meta property="og:title" content="英語 to カタカナ 変換器">
-<meta property="og:description" content="英文を自然なリズムのカタカナ発音に変換。強拍・弱拍や動詞を確認し、英語の音声も聞けます。">
+<meta property="og:description" content="英文を自然なカタカナ発音に変換し、音声も確認できるツールです">
 <meta property="og:url" content="https://eng2kana.ebii.net/">
 <meta property="og:image" content="https://eng2kana.ebii.net/og.png">
 <meta property="og:image:type" content="image/png">
@@ -22,7 +21,7 @@ const ttsBypassKey=(()=>{const url=new URL(location.href),fragment=new URLSearch
 <meta property="og:image:alt" content="ENG2KANA — ENGLISH TO KATAKANA">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="英語 to カタカナ 変換器">
-<meta name="twitter:description" content="英文のリズムと発音をカタカナで確認し、音声で練習できるツール。">
+<meta name="twitter:description" content="英文を自然なカタカナ発音に変換し、音声も確認できるツール">
 <meta name="twitter:image" content="https://eng2kana.ebii.net/og.png">
 <meta name="twitter:image:alt" content="ENG2KANA — ENGLISH TO KATAKANA">
 <meta name="twitter:creator" content="@s__hrimp">
