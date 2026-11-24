@@ -1,6 +1,7 @@
 'use strict';
 import {loadDictionaries} from './dictionary.mjs';
 import {setDictionaries,makeModel,readings,readingUnits,unitText} from './analysis.mjs';
+import {applyPlaybackRate,restorePlaybackRate,storePlaybackRate} from './playback-rate.mjs';
 const $=s=>document.querySelector(s);
 let model=null,dictionaries=null,dictionaryState='loading';
 function predicateSpan(t,value){const span=el('span',t?.predicateRole?'predicate-mark':'',value);if(t?.predicateRole)span.dataset.role=t.predicateRole;return span;}
@@ -38,18 +39,89 @@ function renderReadingSummary(out){
 
 const tagJP=t=>t==='NEG'?'否定':t==='WH'?'疑問詞':t==='AUX'?'助動詞':t==='DT'?'限定詞':t==='PRP'||t==='PRP$'?'代名詞':t==='IN'?'前置詞':t==='CC'?'接続詞':t==='RP'?'不変化詞':/^NN/.test(t)?'名詞':/^VB/.test(t)?'動詞':/^JJ/.test(t)?'形容詞':/^RB/.test(t)?'副詞':t==='CD'?'数詞':t==='MD'?'助動詞':'その他';
 function el(tag,cls,text){let e=document.createElement(tag);if(cls)e.className=cls;if(text!==undefined)e.textContent=text;return e;}
-function toggle(s){s.beat=!s.beat;render(s.id);}
+function toggle(s){s.beat=!s.beat;render({kind:'syllable',id:s.id});}
 function syllableEl(s){let b=el('button','syllable'+(s.beat?' anchor':'')+(s.word.unknown?' unknown':''));b.type='button';b.dataset.syllable=String(s.id);b.setAttribute('aria-pressed',String(s.beat));b.setAttribute('aria-label',`${s.word.word} 第${s.idx+1}音節 ${s.reading||'脱落'}、${s.beat?'拍を解除':'拍に設定'}`);b.title=`${s.word.word} ${s.idx+1}/${s.word.syls.length} · 語彙強勢 ${s.stress}${s.note?' · '+s.note:''} · クリックで切替`;b.append(el('span','marker',s.beat?'●':s.stress===1?'○':s.stress===2?'◦':'·'));let mono=s.word.syls.length===1;b.append(el('span','sound'+(!s.reading?' reduced':''),s.reading||'脱落'));b.append(el('span','wordref',mono?s.word.word:`${s.word.word} ${s.idx+1}/${s.word.syls.length}`));b.append(el('span','ipa',s.word.unknown?'綴り推定':'/'+s.ipa+'/'));b.addEventListener('click',()=>toggle(s));return b;}
 function metric(label,num){let d=el('div','metric');d.append(el('div','',label),el('strong','',String(num)));return d;}
-function render(focusId){
- const out=$('#output'),edit=$('#edit'),wasOpen=!!edit.querySelector('details[open]');out.replaceChildren();edit.replaceChildren();
- if(!model||!model.words.length){out.append(el('p','empty','英文を入力してください。'));$('#copy').disabled=true;$('#reset').disabled=true;$('#beats-count').textContent='';return;}
- $('#copy').disabled=false;$('#reset').disabled=false;model.phrases.forEach(p=>readings(p,$('#connected').checked));
- $('#beats-count').textContent=model.all.filter(s=>s.beat).length+'拍';renderReadingSummary(out);
- const unknown=[...new Set(model.words.filter(t=>t.unknown).map(t=>t.word))];if(unknown.length||model.unsupported.length){const msg=[];if(unknown.length)msg.push('辞書未登録：'+unknown.join(', '));if(model.unsupported.length)msg.push('未対応の文字：'+[...new Set(model.unsupported)].join(' '));out.append(el('div','warning',msg.join('。')));}
- edit.append(el('p','','単語をタップすると強拍・弱拍を切り替えられます。'));
- const source=el('div','source');for(const t of model.tokens){if(t.type==='word'){const hit=t.syls.some(s=>s.beat),b=el('button','word'+(hit?' hit':''),t.word);b.type='button';b.lang='en';b.setAttribute('aria-pressed',String(hit));b.addEventListener('click',()=>{if(hit)t.syls.forEach(s=>s.beat=false);else (t.syls.filter(s=>s.stress===1).at(-1)||t.syls[0]).beat=true;render();});source.append(b);}else if(t.type==='punct'&&!t.word.includes('\n'))source.append(el('span','punct',t.word));}edit.append(source);
- const detail=el('details','detail');detail.open=wasOpen;detail.append(el('summary','','音節ごとの調整'));for(const p of model.phrases){const row=el('div','syllables');p.syls.forEach(s=>row.append(syllableEl(s)));detail.append(row);}edit.append(detail);edit.classList.toggle('hide-ipa',!$('#showipa').checked);if(focusId!==undefined)edit.querySelector(`[data-syllable="${focusId}"]`)?.focus({preventScroll:true});
+const settingsDialog=$('#settings-dialog');
+let activeTab='settings',editView='words',dialogOpener=null;
+// 開いているモーダルに必要な編集DOMだけを生成する。
+function renderBeatEditor(focus){
+ const edit=$('#edit');edit.replaceChildren();
+ edit.classList.toggle('hide-ipa',!$('#showipa').checked);
+ if(!model?.words.length){edit.append(el('p','edit-empty','英文を入力すると拍を調整できます。'));return;}
+ edit.append(el('p','edit-help',editView==='words'?'単語をタップして強拍・弱拍を切り替えます。':'音節をタップして拍の位置を調整します。'));
+ if(editView==='words'){
+  const source=el('div','source');
+  for(const t of model.tokens){
+   if(t.type==='word'){
+    const hit=t.syls.some(s=>s.beat),b=el('button','word'+(hit?' hit':''),t.word);
+    b.type='button';b.lang='en';b.dataset.word=String(t.syls[0].id);b.setAttribute('aria-pressed',String(hit));
+    b.addEventListener('click',()=>{
+     if(hit)t.syls.forEach(s=>s.beat=false);else(t.syls.filter(s=>s.stress===1).at(-1)||t.syls[0]).beat=true;
+     render({kind:'word',id:t.syls[0].id});
+    });
+    source.append(b);
+   }else if(t.type==='punct'&&!t.word.includes('\n'))source.append(el('span','punct',t.word));
+  }
+  edit.append(source);
+ }else{
+  for(const p of model.phrases){const row=el('div','syllables');p.syls.forEach(s=>row.append(syllableEl(s)));edit.append(row);}
+ }
+ if(focus)edit.querySelector('[data-'+focus.kind+'="'+focus.id+'"]')?.focus({preventScroll:true});
+}
+function selectEditView(view){
+ editView=view;
+ for(const v of ['words','syllables'])$('#view-'+v).setAttribute('aria-pressed',String(v===view));
+ $('#ipa-control').hidden=view!=='syllables';
+ if(settingsDialog.open&&activeTab==='beats')renderBeatEditor();
+}
+function selectDialogTab(tab,focus=false){
+ activeTab=tab;
+ for(const name of ['settings','beats']){
+  const selected=name===tab,button=$('#tab-'+name);
+  button.setAttribute('aria-selected',String(selected));button.tabIndex=selected?0:-1;
+  $('#panel-'+name).hidden=!selected;
+ }
+ $('#dialog-title').textContent=tab==='beats'?'拍の調整':'設定';
+ if(tab==='beats')renderBeatEditor();
+ if(focus)$('#tab-'+tab).focus();
+}
+function openSettings(tab,opener){
+ if(settingsDialog.open)return;
+ // 自動解析の待ち時間中でも、モーダルでは現在の入力に対応する拍を表示する。
+ if(tab==='beats'&&model?.text!==$('#input').value.trim()){clearTimeout(inputTimer);analyze();}
+ dialogOpener=opener;selectDialogTab(tab);settingsDialog.showModal();$('#tab-'+tab).focus();
+}
+$('#open-settings').addEventListener('click',e=>openSettings('settings',e.currentTarget));
+$('#open-beats').addEventListener('click',e=>openSettings('beats',e.currentTarget));
+for(const name of ['settings','beats']){
+ const tab=$('#tab-'+name);
+ tab.addEventListener('click',()=>selectDialogTab(name,true));
+ tab.addEventListener('keydown',e=>{
+  if(!['ArrowLeft','ArrowRight','Home','End'].includes(e.key))return;
+  e.preventDefault();
+  selectDialogTab(e.key==='Home'?'settings':e.key==='End'?'beats':name==='settings'?'beats':'settings',true);
+ });
+}
+for(const v of ['words','syllables'])$('#view-'+v).addEventListener('click',()=>selectEditView(v));
+settingsDialog.addEventListener('close',()=>{const opener=dialogOpener;dialogOpener=null;if(opener?.isConnected&&!opener.disabled)opener.focus({preventScroll:true});});
+settingsDialog.addEventListener('click',e=>{
+ if(e.target!==settingsDialog)return;
+ const r=settingsDialog.getBoundingClientRect();
+ if(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom)settingsDialog.close();
+});
+function render(focus){
+ const out=$('#output');out.replaceChildren();
+ const available=!!model?.words.length;
+ for(const id of ['copy','reset','open-beats'])$('#'+id).disabled=!available;
+ if(!available){out.append(el('p','empty','英文を入力してください。'));$('#beats-count').textContent='';}
+ else{
+  model.phrases.forEach(p=>readings(p,$('#connected').checked));
+  $('#beats-count').textContent=model.all.filter(s=>s.beat).length+'拍';renderReadingSummary(out);
+  const unknown=[...new Set(model.words.filter(t=>t.unknown).map(t=>t.word))];
+  if(unknown.length||model.unsupported.length){const msg=[];if(unknown.length)msg.push('辞書未登録：'+unknown.join(', '));if(model.unsupported.length)msg.push('未対応の文字：'+[...new Set(model.unsupported)].join(' '));out.append(el('div','warning',msg.join('。')));}
+ }
+ if(settingsDialog.open&&activeTab==='beats')renderBeatEditor(focus);
 }
 function analyze(){if(!dictionaries)return;const txt=$('#input').value.trim(),mode=$('#density').value;model=makeModel(txt,mode);$('#toast').textContent='';render();}
 function formatCopy(){return model.phrases.map(p=>readingUnits(p).map(g=>g.strong?unitText(g):'('+unitText(g)+')').join('｜')).join('\n');}
@@ -57,13 +129,19 @@ function formatCopy(){return model.phrases.map(p=>readingUnits(p).map(g=>g.stron
 const speechButton = $('#speak');
 const speechAudio = new Audio();
 speechAudio.preload='none';
+const rateSelect=$('#playback-rate');
+rateSelect.value=String(restorePlaybackRate(window));
+function syncPlaybackRate(){return applyPlaybackRate(speechAudio,rateSelect.value);}
+syncPlaybackRate();
+rateSelect.addEventListener('change',()=>{const rate=syncPlaybackRate();storePlaybackRate(window,rate);});
 let speechSession=null, speechCache=null;
 function syncSpeechButton(){
  const active=!!speechSession;
  speechButton.disabled=!$('#input').value.trim();
  $('#clear').disabled=!$('#input').value;
  speechButton.setAttribute('aria-pressed',String(active));
- $('#speak-label').textContent=active?(speechSession?.loading?'生成を中止':'停止'):'全文を再生';
+ const label=active?(speechSession?.loading?'生成を中止':'停止'):'全文を再生';
+ $('#speak-label').textContent=label;speechButton.title=label;speechButton.setAttribute('aria-label',label);
  $('#speak-icon').setAttribute('d',active?'M6 6h12v12H6z':'M8 5v14l11-7z');
  speechButton.setAttribute('aria-busy',String(!!speechSession?.loading));
 }
@@ -95,6 +173,7 @@ async function startSpeech(){
   if(speechSession!==session)return;
   session.loading=false;syncSpeechButton();$('#toast').textContent='';
   speechAudio.currentTime=0;
+  syncPlaybackRate();
   await speechAudio.play();
   if(speechSession!==session){if(!speechSession)speechAudio.pause();return;}
  }catch(error){
@@ -113,7 +192,7 @@ syncSpeechButton();
 let inputTimer;
 function schedule(){clearTimeout(inputTimer);inputTimer=setTimeout(analyze,250);}
 $('#input').addEventListener('input',e=>{if(!e.isComposing)schedule();});$('#input').addEventListener('compositionend',schedule);$('#input').addEventListener('keydown',e=>{if(e.key==='Enter'&&(e.ctrlKey||e.metaKey)){e.preventDefault();clearTimeout(inputTimer);analyze();}});
-$('#analyze').addEventListener('click',()=>{clearTimeout(inputTimer);if(dictionaryState==='error'){initializeDictionaries();return;}analyze();$('#input').blur();});$('#clear').addEventListener('click',()=>{clearTimeout(inputTimer);$('#input').value='';syncSpeechButton();analyze();$('#input').focus();});$('#density').addEventListener('change',()=>{clearTimeout(inputTimer);analyze();});$('#connected').addEventListener('change',()=>{if(model)render();});$('#showipa').addEventListener('change',()=>{$('#edit').classList.toggle('hide-ipa',!$('#showipa').checked);if($('#showipa').checked)$('#edit details')?.setAttribute('open','');});$('#reset').addEventListener('click',()=>{if(model){model.all.forEach(s=>s.beat=s.auto);render();}});
+$('#analyze').addEventListener('click',()=>{clearTimeout(inputTimer);if(dictionaryState==='error'){initializeDictionaries();return;}analyze();$('#input').blur();});$('#clear').addEventListener('click',()=>{clearTimeout(inputTimer);$('#input').value='';syncSpeechButton();analyze();$('#input').focus();});$('#density').addEventListener('change',()=>{clearTimeout(inputTimer);analyze();});$('#connected').addEventListener('change',()=>{if(model)render();});$('#showipa').addEventListener('change',()=>{$('#edit').classList.toggle('hide-ipa',!$('#showipa').checked);});$('#reset').addEventListener('click',()=>{if(model){model.all.forEach(s=>s.beat=s.auto);render();}});
 $('#copy').addEventListener('click',async()=>{clearTimeout(inputTimer);if(!model||model.text!==$('#input').value.trim())analyze();if(!model?.words.length)return;try{await navigator.clipboard.writeText(formatCopy());$('#toast').textContent='コピーしました。';}catch{let a=el('textarea','sr-only');a.value=formatCopy();document.body.append(a);a.select();let ok=false;try{ok=document.execCommand('copy');}catch{}a.remove();$('#toast').textContent=ok?'コピーしました。':'コピーできませんでした。';}});
 
 // 辞書の読み込み中は、未登録語として誤って解析しない。失敗時はボタンから再試行できる。
